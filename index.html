@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a192f">
+  <title>🌊 صيد - راس البسيط</title>
+  <style>
+    :root {
+      --bg: #0a192f; --card: rgba(17, 34, 64, 0.8); --text: #e6f1ff; --muted: #8892b0;
+      --accent: #64ffda; --btn-p: #0077b6; --danger: #ef4444; --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 70px; }
+    
+    /* Navigation */
+    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10, 25, 47, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); font-size: 0.7rem; cursor: pointer; transition: 0.2s; }
+    .nav-item span { font-size: 1.4rem; margin-bottom: 2px; }
+    .nav-item.active { color: var(--accent); }
+    /* Layout */
+    .container { padding: 16px; max-width: 500px; margin: 0 auto; display: none; animation: fade 0.3s ease; }
+    .container.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    h1 { text-align: center; color: var(--accent); margin-bottom: 20px; font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; color: var(--accent); margin: 20px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+    /* Cards & Grids */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
+    .val { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 4px 0; }
+    .lbl { font-size: 0.75rem; color: var(--muted); }
+    /* Buttons */
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; margin-bottom: 8px; font-size: 0.9rem; }
+    .btn-p { background: linear-gradient(135deg, #00b4d8, #0077b6); color: #fff; }
+    .btn-s { background: rgba(255,255,255,0.1); color: var(--text); }
+    .btn-d { background: rgba(239,68,68,0.2); color: #ff8888; width: auto; padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; margin: 0; }
+    
+    /* Forms */
+    input, textarea, select { width: 100%; padding: 10px; margin: 5px 0 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; font-size: 0.9rem; }
+    
+    /* Lists */
+    .item-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; }
+    .item-info { flex: 1; margin-right: 10px; }
+    .item-title { font-weight: bold; font-size: 0.95rem; }
+    .item-sub { font-size: 0.75rem; color: var(--muted); }
+    .item-img { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; margin-left: 10px; background: #222; }    
+    /* Checklist */
+    .check-item { display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 6px; border-radius: 8px; cursor: pointer; }
+    .check-item.checked { background: rgba(100, 255, 218, 0.1); border-right: 3px solid var(--accent); }    .check-item input { width: auto; margin: 0 10px 0 0; }
+    
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: #112240; padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; }
+  </style>
+</head>
+<body>
+  <!-- 1. Home / Weather -->
+  <div id="tab-home" class="container active">
+    <h1>🌊 حالة البحر - راس البسيط</h1>
+    <div class="grid-2">
+      <div class="card"><div class="lbl">💨 الرياح</div><div class="val" id="w-spd">--</div></div>
+      <div class="card"><div class="lbl">🧭 الاتجاه</div><div class="val" id="w-dir">--</div></div>
+      <div class="card"><div class="lbl">🌊 الأمواج</div><div class="val" id="w-wave">--</div></div>
+      <div class="card"><div class="lbl">📊 الضغط</div><div class="val" id="w-press">--</div></div>
+    </div>
+    <div class="card">
+      <div class="lbl">🎣 مؤشر الصيد</div>
+      <div class="val" id="score" style="font-size: 2rem; color: var(--accent);">--%</div>
+      <div id="tips" style="font-size: 0.85rem; margin-top: 5px; color: #ccc;"></div>
+    </div>
+    <button class="btn btn-p" onclick="fetchData()">🔄 تحديث البيانات</button>
+    <div style="text-align:center; font-size:0.7rem; color:var(--muted); margin-top:10px;" id="status">...</div>
+  </div>
+  
+  <!-- 2. Trips Log -->
+  <div id="tab-trips" class="container">
+    <h1>📸 سجل رحلاتي</h1>
+    <button class="btn btn-p" onclick="openModal('tripModal')">➕ إضافة رحلة جديدة</button>
+    <div id="trips-list"></div>
+  </div>
+  
+  <!-- 3. Bait Library -->
+  <div id="tab-baits" class="container">
+    <h1>🪱 مكتبة الطعوم</h1>
+    <button class="btn btn-p" onclick="openModal('baitModal')">➕ إضافة طعم جديد</button>
+    <div id="baits-list"></div>
+  </div>
+  
+  <!-- 4. Fishing Spots -->
+  <div id="tab-spots" class="container">
+    <h1>📍 نقاط الصيد</h1>
+    <button class="btn btn-p" onclick="openModal('spotModal')">➕ إضافة موقع جديد</button>
+    <div id="spots-list"></div>
+  </div>
+  
+  <!-- 5. Tools / Checklist -->
+  <div id="tab-tools" class="container">    <h1>🎒 تجهيزات الصياد</h1>
+    <div id="checklist-container"></div>
+    <button class="btn btn-s" onclick="resetChecklist()" style="margin-top:20px;">↻ إعادة تعيين القائمة</button>
+    
+    <h2 style="margin-top:30px;">🌙 طور القمر اليوم</h2>
+    <div class="card" style="text-align:center;">
+      <div id="moon-phase" style="font-size:1.2rem; font-weight:bold;">جاري الحساب...</div>
+      <div id="moon-text" style="font-size:0.8rem; color:var(--muted);"></div>
+    </div>
+  </div>
+  
+  <!-- Bottom Navigation -->
+  <div class="nav-bar">
+    <div class="nav-item active" onclick="switchTab('tab-home', this)"><span>🏠</span>الحالة</div>
+    <div class="nav-item" onclick="switchTab('tab-trips', this)"><span>📸</span>رحلاتي</div>
+    <div class="nav-item" onclick="switchTab('tab-baits', this)"><span>🪱</span>الطعوم</div>
+    <div class="nav-item" onclick="switchTab('tab-spots', this)"><span>📍</span>المواقع</div>
+    <div class="nav-item" onclick="switchTab('tab-tools', this)"><span>🎒</span>أدوات</div>
+  </div>
+  
+  <!-- Modals -->
+  <!-- Trip Modal -->
+  <div id="tripModal" class="modal">
+    <div class="modal-content">
+      <h3>📝 تسجيل رحلة جديدة</h3>
+      <input type="date" id="trip-date">
+      <input type="number" id="trip-weight" placeholder="⚖️ الوزن الإجمالي (كغ)">
+      <input type="file" id="trip-img" accept="image/*">
+      <textarea id="trip-notes" placeholder="📋 ملاحظات الرحلة..." rows="2"></textarea>
+      <button class="btn btn-p" onclick="saveTrip()">💾 حفظ</button>
+      <button class="btn btn-s" onclick="closeModal('tripModal')">❌ إلغاء</button>
+    </div>
+  </div>
+  
+  <!-- Bait Modal -->
+  <div id="baitModal" class="modal">
+    <div class="modal-content">
+      <h3>🪱 إضافة طعم</h3>
+      <input type="text" id="bait-name" placeholder="📛 اسم الطعم (مثال: سردين)">
+      <input type="text" id="bait-fish" placeholder="🎯 الأسماك المستهدفة">
+      <textarea id="bait-desc" placeholder="📝 وصف أو ملاحظة..." rows="2"></textarea>
+      <button class="btn btn-p" onclick="saveBait()">💾 حفظ</button>
+      <button class="btn btn-s" onclick="closeModal('baitModal')">❌ إلغاء</button>
+    </div>
+  </div>
+  
+  <!-- Spot Modal -->
+  <div id="spotModal" class="modal">
+    <div class="modal-content">
+      <h3>📍 إضافة موقع صيد</h3>      <input type="text" id="spot-name" placeholder="📛 اسم الموقع (مثال: الصخرة الكبيرة)">
+      <textarea id="spot-desc" placeholder="📝 وصف المكان..." rows="2"></textarea>
+      <input type="text" id="spot-coords" placeholder="🗺️ الإحداثيات (اختياري)" readonly>
+      <button class="btn btn-s" onclick="getGPS()" style="margin-bottom:10px;">📡 تحديد موقعي الحالي</button>
+      <button class="btn btn-p" onclick="saveSpot()">💾 حفظ</button>
+      <button class="btn btn-s" onclick="closeModal('spotModal')">❌ إلغاء</button>
+    </div>
+  </div>
+
+<script>
+  // --- Navigation ---
+  function switchTab(id, el) {
+    document.querySelectorAll('.container').forEach(d => d.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    el.classList.add('active');
+    if(id === 'tab-trips') renderTrips();
+    if(id === 'tab-baits') renderBaits();
+    if(id === 'tab-spots') renderSpots();
+    if(id === 'tab-tools') { renderChecklist(); calcMoon(); }
+  }
+  function openModal(id) { 
+    document.getElementById(id).classList.add('active'); 
+    if(id === 'tripModal') document.getElementById('trip-date').valueAsDate = new Date();
+  }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  
+  // --- Weather Logic ---
+  const LAT = 35.9333, LON = 35.9167;
+  async function fetchData() {
+    const status = document.getElementById('status');
+    status.innerText = '⏳ جاري التحديث...';
+    try {
+      const [w, m] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=wind_speed_10m,wind_direction_10m,surface_pressure&timezone=Asia/Damascus`).then(r=>r.json()),
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&current=wave_height&timezone=Asia/Damascus`).then(r=>r.json()).catch(()=>null)
+      ]);
+      
+      const wind = w.current.wind_speed_10m;
+      const dir = w.current.wind_direction_10m;
+      const press = w.current.surface_pressure;
+      const wave = m?.current?.wave_height || 0;
+      const dirs = ['شمال⬆️','شمال شرق↗️','شرق➡️','جنوب شرق↘️','جنوب⬇️','جنوب غرب↙️','غرب⬅️','شمال غرب↖️'];
+      const dirName = dirs[Math.round(dir/45)%8];
+      document.getElementById('w-spd').innerText = `${Math.round(wind)} كم/س 💨`;
+      document.getElementById('w-dir').innerText = dirName;
+      document.getElementById('w-wave').innerText = `${wave.toFixed(2)} م 🌊`;
+      document.getElementById('w-press').innerText = `${(press*0.75).toFixed(1)} mmHg 📊`;
+      
+      let score = 0;      if(wind>=5 && wind<=15) score+=35; else if(wind<25) score+=25; else score+=10;
+      if(wave<0.5) score+=35; else if(wave<1) score+=25; else score+=10;
+      if(press>1010 && press<1018) score+=30; else score+=15;
+      
+      document.getElementById('score').innerText = `${score}%`;
+      const tipsEl = document.getElementById('tips');
+      if(score>70) tipsEl.innerText = "🟢 ممتاز للصيد! 🎣✨";
+      else if(score>50) tipsEl.innerText = "🟡 مقبول / حذر ⚠️";
+      else tipsEl.innerText = "🔴 ظروف صعبة / يُفضل التأجيل 🚫";
+      
+      status.innerText = "✅ تم التحديث بنجاح";
+    } catch(e) { status.innerText = "❌ فشل الاتصال بالإنترنت"; }
+  }
+  
+  // --- Trips Logic ---
+  function saveTrip() {
+    const file = document.getElementById('trip-img').files[0];
+    const reader = new FileReader();
+    const process = (imgBase64) => {
+      const trip = {
+        id: Date.now(),
+        date: document.getElementById('trip-date').value,
+        weight: document.getElementById('trip-weight').value,
+        notes: document.getElementById('trip-notes').value,
+        img: imgBase64 || null
+      };
+      const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+      trips.unshift(trip);
+      localStorage.setItem('trips', JSON.stringify(trips));
+      closeModal('tripModal');
+      renderTrips();
+    };
+    
+    if(file) {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200; canvas.height = 200;
+        canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
+        process(canvas.toDataURL('image/jpeg', 0.5));
+      };
+    } else {
+      process(null);
+    }
+  }
+  function renderTrips() {
+    const trips = JSON.parse(localStorage.getItem('trips') || '[]');
+    const container = document.getElementById('trips-list');
+    if(trips.length === 0) {      container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">📭 لا توجد رحلات مسجلة بعد</div>';
+      return;
+    }
+    container.innerHTML = trips.map(t => `
+      <div class="item-row">
+        ${t.img ? `<img src="${t.img}" class="item-img">` : '<div class="item-img" style="display:flex;align-items:center;justify-content:center;">🐟</div>'}
+        <div class="item-info">
+          <div class="item-title">📅 ${t.date} | ⚖️ ${t.weight} كغ</div>
+          <div class="item-sub">📝 ${t.notes || 'بدون ملاحظات'}</div>
+        </div>
+        <button class="btn-d" onclick="deleteItem('trips', ${t.id}, renderTrips)">🗑️</button>
+      </div>
+    `).join('');
+  }
+  
+  // --- Baits Logic ---
+  function saveBait() {
+    const bait = {
+      id: Date.now(),
+      name: document.getElementById('bait-name').value,
+      fish: document.getElementById('bait-fish').value,
+      desc: document.getElementById('bait-desc').value
+    };
+    if(!bait.name) return;
+    const baits = JSON.parse(localStorage.getItem('baits') || '[]');
+    baits.push(bait);
+    localStorage.setItem('baits', JSON.stringify(baits));
+    closeModal('baitModal');
+    renderBaits();
+  }
+  function renderBaits() {
+    if(!localStorage.getItem('baits')) {
+      const defaults = [
+        {id:1, name:"سردين 🐟", fish:"باركودة، دنيس 🎣", desc:"👑 الملك في الشتاء، طعم حي أو متجمد"},
+        {id:2, name:"دود الشاطئ 🪱", fish:"قاروص، قرموط 🐟", desc:"🌙 يفضل استخدامه ليلاً أو في الماء العكر"},
+        {id:3, name:"عجين 🫓", fish:"بوري، سرفس 🐟", desc:"💰 رخيص ومتوفر، جيد للأسماك الصغيرة"},
+        {id:4, name:"حبّار 🦑", fish:"متنوع 🎣", desc:"💪 طعم صلب يتحمل التيارات القوية"}
+      ];
+      localStorage.setItem('baits', JSON.stringify(defaults));
+    }
+    
+    const baits = JSON.parse(localStorage.getItem('baits'));
+    document.getElementById('baits-list').innerHTML = baits.map(b => `
+      <div class="item-row">
+        <div class="item-info">
+          <div class="item-title">${b.name}</div>
+          <div class="item-sub">🎯 ${b.fish}</div>
+          <div class="item-sub">📝 ${b.desc}</div>
+        </div>
+        <button class="btn-d" onclick="deleteItem('baits', ${b.id}, renderBaits)">🗑️</button>      </div>
+    `).join('');
+  }
+  
+  // --- Spots Logic ---
+  function getGPS() {
+    if(navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('spot-coords').value = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+      }, err => alert("⚠️ تعذر تحديد الموقع، تأكد من تفعيل GPS"));
+    }
+  }
+  function saveSpot() {
+    const spot = {
+      id: Date.now(),
+      name: document.getElementById('spot-name').value,
+      desc: document.getElementById('spot-desc').value,
+      coords: document.getElementById('spot-coords').value
+    };
+    if(!spot.name) return;
+    const spots = JSON.parse(localStorage.getItem('spots') || '[]');
+    spots.push(spot);
+    localStorage.setItem('spots', JSON.stringify(spots));
+    closeModal('spotModal');
+    renderSpots();
+  }
+  function renderSpots() {
+    const spots = JSON.parse(localStorage.getItem('spots') || '[]');
+    if(spots.length === 0) {
+      document.getElementById('spots-list').innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">📭 لا توجد مواقع مسجلة بعد</div>';
+      return;
+    }
+    document.getElementById('spots-list').innerHTML = spots.map(s => `
+      <div class="item-row">
+        <div class="item-info">
+          <div class="item-title">📍 ${s.name}</div>
+          <div class="item-sub">🗺️ ${s.coords || 'غير محدد'}</div>
+          <div class="item-sub">📝 ${s.desc}</div>
+        </div>
+        <button class="btn-d" onclick="deleteItem('spots', ${s.id}, renderSpots)">🗑️</button>
+      </div>
+    `).join('');
+  }
+  
+  // --- Utils ---
+  function deleteItem(key, id, renderFn) {
+    if(!confirm("⚠️ هل تريد حقاً حذف هذا العنصر؟")) return;
+    let data = JSON.parse(localStorage.getItem(key) || '[]');
+    data = data.filter(item => item.id !== id);
+    localStorage.setItem(key, JSON.stringify(data));    renderFn();
+  }
+  
+  // --- Tools / Checklist ---
+  const defaultChecklist = [
+    {id: 'c1', text: '🎣 الصنارة (العيدان)', checked: false},
+    {id: 'c2', text: '🌀 البكرة والشريط', checked: false},
+    {id: 'c3', text: '🪱 علبة الطعم والخطاطيف', checked: false},
+    {id: 'c4', text: '⚖️ الميزان والشباك', checked: false},
+    {id: 'c5', text: '🧊 سلة الحفظ (البرميل)', checked: false},
+    {id: 'c6', text: '✂️ أدوات قص (كماشة)', checked: false},
+    {id: 'c7', text: '🔦 مصباح أمامي (لليل)', checked: false},
+    {id: 'c8', text: '💧 مياه وطعام', checked: false}
+  ];
+  function renderChecklist() {
+    let list = JSON.parse(localStorage.getItem('checklist'));
+    if(!list) list = defaultChecklist;
+    
+    document.getElementById('checklist-container').innerHTML = list.map(item => `
+      <div class="check-item ${item.checked ? 'checked' : ''}" onclick="toggleCheck('${item.id}')">
+        <input type="checkbox" ${item.checked ? 'checked' : ''} readonly>
+        <span>${item.text}</span>
+      </div>
+    `).join('');
+  }
+  function toggleCheck(id) {
+    let list = JSON.parse(localStorage.getItem('checklist') || JSON.stringify(defaultChecklist));
+    const item = list.find(i => i.id === id);
+    if(item) { item.checked = !item.checked; localStorage.setItem('checklist', JSON.stringify(list)); renderChecklist(); }
+  }
+  function resetChecklist() {
+    if(confirm("↻ هل تريد إعادة تعيين جميع العناصر؟")) {
+      localStorage.removeItem('checklist');
+      renderChecklist();
+    }
+  }
+  
+  // --- Moon Phase Calc ---
+  function calcMoon() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    
+    let c = 0, e = 0, jd = 0, b = 0;
+    if (month < 3) { year--; month += 12; }
+    ++month;
+    c = 365.25 * year;
+    e = 30.6 * month;
+    jd = c + e + day - 694039.09;    jd /= 29.5305882;
+    b = parseInt(jd);
+    jd -= b;
+    b = Math.round(jd * 8);
+    if (b >= 8 ) b = 0;
+    
+    const phases = ["🌑 محاق (بداية)", "🌒 هلال أول", "🌓 تربيع أول", "🌔 أحدب متزايد", "🌕 بدر (اكتمال)", "🌖 أحدب متناقص", "🌗 تربيع آخر", "🌘 هلال آخر"];
+    document.getElementById('moon-phase').innerText = phases[b];
+    document.getElementById('moon-text').innerText = (b===0 || b===4) ? "🌊 نشاط صيد عالي (المد والجزر أقوياء) 🎣" : "🎣 نشاط صيد معتدل";
+  }
+  
+  // Init
+  window.onload = () => { fetchData(); };
+</script>
+</body>
+</html>
