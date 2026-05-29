@@ -53,6 +53,11 @@
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
     .modal.active { display: flex; }
     .modal-content { background: #112240; padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; }
+    
+    /* Tips Box */
+    .tips-box { background: rgba(100,255,218,0.1); border-right: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 0.85rem; }
+    .tips-box ul { list-style: none; padding-right: 0; margin: 5px 0 0; }
+    .tips-box li { margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -69,6 +74,7 @@
       <div class="lbl">🎣 مؤشر الصيد</div>
       <div class="val" id="score" style="font-size: 2rem; color: var(--accent);">--%</div>
       <div id="tips" style="font-size: 0.85rem; margin-top: 5px; color: #ccc;"></div>
+      <div id="tips-detailed" class="tips-box" style="display:none;"></div>
     </div>
     <button class="btn btn-p" onclick="fetchData()">🔄 تحديث البيانات</button>
     <div style="text-align:center; font-size:0.7rem; color:var(--muted); margin-top:10px;" id="status">...</div>
@@ -90,13 +96,13 @@
   
   <!-- 4. Fishing Spots -->
   <div id="tab-spots" class="container">
-    <h1>📍 نقاط الصيد</h1>
-    <button class="btn btn-p" onclick="openModal('spotModal')">➕ إضافة موقع جديد</button>
+    <h1>📍 نقاط الصيد</h1>    <button class="btn btn-p" onclick="openModal('spotModal')">➕ إضافة موقع جديد</button>
     <div id="spots-list"></div>
   </div>
   
   <!-- 5. Tools / Checklist -->
-  <div id="tab-tools" class="container">    <h1>🎒 تجهيزات الصياد</h1>
+  <div id="tab-tools" class="container">
+    <h1>🎒 تجهيزات الصياد</h1>
     <div id="checklist-container"></div>
     <button class="btn btn-s" onclick="resetChecklist()" style="margin-top:20px;">↻ إعادة تعيين القائمة</button>
     
@@ -139,13 +145,13 @@
       <textarea id="bait-desc" placeholder="📝 وصف أو ملاحظة..." rows="2"></textarea>
       <button class="btn btn-p" onclick="saveBait()">💾 حفظ</button>
       <button class="btn btn-s" onclick="closeModal('baitModal')">❌ إلغاء</button>
-    </div>
-  </div>
+    </div>  </div>
   
   <!-- Spot Modal -->
   <div id="spotModal" class="modal">
     <div class="modal-content">
-      <h3>📍 إضافة موقع صيد</h3>      <input type="text" id="spot-name" placeholder="📛 اسم الموقع (مثال: الصخرة الكبيرة)">
+      <h3>📍 إضافة موقع صيد</h3>
+      <input type="text" id="spot-name" placeholder="📛 اسم الموقع (مثال: الصخرة الكبيرة)">
       <textarea id="spot-desc" placeholder="📝 وصف المكان..." rows="2"></textarea>
       <input type="text" id="spot-coords" placeholder="🗺️ الإحداثيات (اختياري)" readonly>
       <button class="btn btn-s" onclick="getGPS()" style="margin-bottom:10px;">📡 تحديد موقعي الحالي</button>
@@ -174,6 +180,40 @@
   
   // --- Weather Logic ---
   const LAT = 35.9333, LON = 35.9167;
+  
+  function generateTips(wind, wave, press, dir, moonPhase) {
+    const tips = [];
+    
+    // Wind tips
+    if(wind < 5) tips.push("🍃 الرياح خفيفة جداً: مثالي للصيد الخفيف، استخدم طعوم صغيرة");
+    else if(wind >= 5 && wind <= 15) tips.push("✅ سرعة رياح مثالية: ظروف ممتازة لمعظم أنواع الصيد");
+    else if(wind > 15 && wind < 25) tips.push("⚠️ رياح متوسطة: اختر مواقع محمية، واستخدم أوزان أثقل");
+    else tips.push("🚫 رياح قوية: يُفضل تأجيل الرحلة أو الصيد من الشاطئ في مناطق محمية");
+    
+    // Direction tips
+    const favorableDirs = ['غرب', 'شمال غرب', 'شمال'];
+    if(favorableDirs.includes(dir)) tips.push("🎯 اتجاه رياح مناسب: يجلب الأسماك نحو الشاطئ");
+    else if(['جنوب', 'جنوب شرق'].includes(dir)) tips.push("🌡️ رياح دافئة: قد تقلل نشاط الأسماك، جرب الصيد فجرًا أو مساءً");
+        // Wave tips
+    if(wave < 0.5) tips.push("🪷 أمواج هادئة: مثالي للصيد بالطواف أو القارب الصغير");
+    else if(wave >= 0.5 && wave < 1) tips.push("🌊 أمواج معتدلة: جيدة لصيد القاع، استخدم خطاطيف مثبتة");
+    else tips.push("🌊🌊 أمواج عالية: احذر من الانزلاق، استخدم معدات قوية وابتعد عن الصخور الزلقة");
+    
+    // Pressure tips
+    if(press > 1010 && press < 1018) tips.push("📈 ضغط جوي مستقر: الأسماك نشطة وتتغذى بانتظام");
+    else if(press < 1010) tips.push("📉 ضغط منخفض: قد تزداد نشاطاً قبل تغير الجو، جرب الطعوم المتحركة");
+    else tips.push("📊 ضغط مرتفع: الأسماك في الأعماق، استخدم طعوم تغوص أو انتظر المساء");
+    
+    // Moon tips
+    if(moonPhase === 0 || moonPhase === 4) tips.push("🌕🌑 طور القمر قوي: المد والجزر نشط، أفضل أوقات الصيد عند تغير المد");
+    else if(moonPhase === 2 || moonPhase === 6) tips.push("🌓🌗 تربيع القمر: نشاط معتدل، ركز على أوقات الشروق والغروب");
+    
+    // General safety
+    if(wind > 20 || wave > 1.5) tips.push("⚠️ تنبيه سلامة: ارتدِ سترة النجاة، وأبلغ أحداً عن موقعك");
+    
+    return tips;
+  }
+  
   async function fetchData() {
     const status = document.getElementById('status');
     status.innerText = '⏳ جاري التحديث...';
@@ -189,29 +229,57 @@
       const wave = m?.current?.wave_height || 0;
       const dirs = ['شمال⬆️','شمال شرق↗️','شرق➡️','جنوب شرق↘️','جنوب⬇️','جنوب غرب↙️','غرب⬅️','شمال غرب↖️'];
       const dirName = dirs[Math.round(dir/45)%8];
+      const dirText = ['شمال','شمال شرق','شرق','جنوب شرق','جنوب','جنوب غرب','غرب','شمال غرب'][Math.round(dir/45)%8];
+      
       document.getElementById('w-spd').innerText = `${Math.round(wind)} كم/س 💨`;
       document.getElementById('w-dir').innerText = dirName;
       document.getElementById('w-wave').innerText = `${wave.toFixed(2)} م 🌊`;
       document.getElementById('w-press').innerText = `${(press*0.75).toFixed(1)} mmHg 📊`;
       
-      let score = 0;      if(wind>=5 && wind<=15) score+=35; else if(wind<25) score+=25; else score+=10;
+      let score = 0;
+      if(wind>=5 && wind<=15) score+=35; else if(wind<25) score+=25; else score+=10;
       if(wave<0.5) score+=35; else if(wave<1) score+=25; else score+=10;
       if(press>1010 && press<1018) score+=30; else score+=15;
       
+      // Moon phase for tips
+      const date = new Date();
+      let c=0,e=0,jd=0,b=0;      let month = date.getMonth()+1, year = date.getFullYear(), day = date.getDate();
+      if (month < 3) { year--; month += 12; }
+      ++month;
+      c = 365.25 * year; e = 30.6 * month;
+      jd = c + e + day - 694039.09; jd /= 29.5305882;
+      b = Math.round((jd - parseInt(jd)) * 8); if(b>=8) b=0;
+      
       document.getElementById('score').innerText = `${score}%`;
       const tipsEl = document.getElementById('tips');
-      if(score>70) tipsEl.innerText = "🟢 ممتاز للصيد! 🎣✨";
-      else if(score>50) tipsEl.innerText = "🟡 مقبول / حذر ⚠️";
-      else tipsEl.innerText = "🔴 ظروف صعبة / يُفضل التأجيل 🚫";
+      const tipsDetailed = document.getElementById('tips-detailed');
+      
+      if(score>70) {
+        tipsEl.innerText = "🟢 ممتاز للصيد! 🎣✨";
+        tipsDetailed.style.display = 'block';
+      } else if(score>50) {
+        tipsEl.innerText = "🟡 مقبول / حذر ⚠️";
+        tipsDetailed.style.display = 'block';
+      } else {
+        tipsEl.innerText = "🔴 ظروف صعبة / يُفضل التأجيل 🚫";
+        tipsDetailed.style.display = 'block';
+      }
+      
+      // Generate and display detailed tips
+      const tipsList = generateTips(wind, wave, press, dirText, b);
+      tipsDetailed.innerHTML = `<strong>💡 نصائح مخصصة لظروفك:</strong><ul>${tipsList.map(t=>`<li>${t}</li>`).join('')}</ul>`;
       
       status.innerText = "✅ تم التحديث بنجاح";
-    } catch(e) { status.innerText = "❌ فشل الاتصال بالإنترنت"; }
+    } catch(e) { 
+      status.innerText = "❌ فشل الاتصال بالإنترنت"; 
+      document.getElementById('tips').innerText = "⚠️ تحقق من اتصالك وحاول مرة أخرى";
+      document.getElementById('tips-detailed').style.display = 'none';
+    }
   }
   
   // --- Trips Logic ---
   function saveTrip() {
     const file = document.getElementById('trip-img').files[0];
-    const reader = new FileReader();
     const process = (imgBase64) => {
       const trip = {
         id: Date.now(),
@@ -224,8 +292,7 @@
       trips.unshift(trip);
       localStorage.setItem('trips', JSON.stringify(trips));
       closeModal('tripModal');
-      renderTrips();
-    };
+      renderTrips();    };
     
     if(file) {
       const img = new Image();
@@ -243,7 +310,8 @@
   function renderTrips() {
     const trips = JSON.parse(localStorage.getItem('trips') || '[]');
     const container = document.getElementById('trips-list');
-    if(trips.length === 0) {      container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">📭 لا توجد رحلات مسجلة بعد</div>';
+    if(trips.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">📭 لا توجد رحلات مسجلة بعد</div>';
       return;
     }
     container.innerHTML = trips.map(t => `
@@ -273,8 +341,7 @@
     closeModal('baitModal');
     renderBaits();
   }
-  function renderBaits() {
-    if(!localStorage.getItem('baits')) {
+  function renderBaits() {    if(!localStorage.getItem('baits')) {
       const defaults = [
         {id:1, name:"سردين 🐟", fish:"باركودة، دنيس 🎣", desc:"👑 الملك في الشتاء، طعم حي أو متجمد"},
         {id:2, name:"دود الشاطئ 🪱", fish:"قاروص، قرموط 🐟", desc:"🌙 يفضل استخدامه ليلاً أو في الماء العكر"},
@@ -292,7 +359,8 @@
           <div class="item-sub">🎯 ${b.fish}</div>
           <div class="item-sub">📝 ${b.desc}</div>
         </div>
-        <button class="btn-d" onclick="deleteItem('baits', ${b.id}, renderBaits)">🗑️</button>      </div>
+        <button class="btn-d" onclick="deleteItem('baits', ${b.id}, renderBaits)">🗑️</button>
+      </div>
     `).join('');
   }
   
@@ -322,8 +390,7 @@
     const spots = JSON.parse(localStorage.getItem('spots') || '[]');
     if(spots.length === 0) {
       document.getElementById('spots-list').innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">📭 لا توجد مواقع مسجلة بعد</div>';
-      return;
-    }
+      return;    }
     document.getElementById('spots-list').innerHTML = spots.map(s => `
       <div class="item-row">
         <div class="item-info">
@@ -341,7 +408,8 @@
     if(!confirm("⚠️ هل تريد حقاً حذف هذا العنصر؟")) return;
     let data = JSON.parse(localStorage.getItem(key) || '[]');
     data = data.filter(item => item.id !== id);
-    localStorage.setItem(key, JSON.stringify(data));    renderFn();
+    localStorage.setItem(key, JSON.stringify(data));
+    renderFn();
   }
   
   // --- Tools / Checklist ---
@@ -371,8 +439,7 @@
     const item = list.find(i => i.id === id);
     if(item) { item.checked = !item.checked; localStorage.setItem('checklist', JSON.stringify(list)); renderChecklist(); }
   }
-  function resetChecklist() {
-    if(confirm("↻ هل تريد إعادة تعيين جميع العناصر؟")) {
+  function resetChecklist() {    if(confirm("↻ هل تريد إعادة تعيين جميع العناصر؟")) {
       localStorage.removeItem('checklist');
       renderChecklist();
     }
@@ -390,7 +457,8 @@
     ++month;
     c = 365.25 * year;
     e = 30.6 * month;
-    jd = c + e + day - 694039.09;    jd /= 29.5305882;
+    jd = c + e + day - 694039.09;
+    jd /= 29.5305882;
     b = parseInt(jd);
     jd -= b;
     b = Math.round(jd * 8);
